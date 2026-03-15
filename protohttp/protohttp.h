@@ -1,10 +1,11 @@
 
 #ifndef PROTOHTTP_H
 #define PROTOHTTP_H
+
 #define defaultport "80"
 
 #include <stdio.h>
-#include <winsock.h>
+#include <winsock2.h>
 #include <ws2tcpip.h>
 #include <string.h>
 
@@ -13,39 +14,66 @@ typedef enum {
     GET,
     POST,
     PUT,
-    rDELETE,
+    DELETE_,
 	UNKNOWN,
 
 } REQUEST;
 
-REQUEST Httpbuild(const char *type)
+
+int WSAIntilize()
 {
-	
-	
-    if (strcmp(type, "GET") == 0) return GET;
-    if (strcmp(type, "POST") == 0) return POST;
-    if (strcmp(type, "PUT") == 0) return PUT;
-    if (strcmp(type, "DELETE") == 0) return rDELETE;
-
-
-    return UNKNOWN;
-	
+	WSADATA wsa;
+	if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
+		printf("WSAStartup failed\n");
+		return 1;
+	}
 	
 }
-
-void HttpBuildRequest(char *request, const char *type, const char *HOST)
+REQUEST Httpbuild(const char *type, REQUEST rtype)
 {
-	
-    sprintf(request,
+
+
+	if (strcmp(type, "GET") == 0){
+		rtype = GET;
+		return rtype;
+	}
+
+	if (strcmp(type, "POST") == 0) {
+		rtype = POST;
+		return rtype;
+	}
+
+	if (strcmp(type, "PUT") == 0){
+		rtype = PUT;
+		return rtype;
+	}
+
+	if (strcmp(type, "DELETE") == 0){
+		rtype = DELETE;
+		return rtype;
+	}
+
+	else {;;;}
+
+
+}
+
+void HttpbuildRequest(const char *rtype, const char *HOST, char *request, size_t sizeb)
+{
+
+
+    snprintf(request, sizeb,
         "%s / HTTP/1.1\r\n"
         "Host: %s\r\n"
-        "Connection: close\r\n\r\n",
-        type, HOST);
-		
-		
+        "Connection: close\r\n"
+        "\r\n",
+        rtype, HOST);
+
+
+
 }
 
-int HttpOpenBridge(const char *HOST, const char *port)
+int HttpOpenBridge(const char *HOST, const char *port, struct addrinfo **rslt)
 {
 
 	struct addrinfo *result = NULL;
@@ -82,68 +110,74 @@ int HttpOpenBridge(const char *HOST, const char *port)
 		WSACleanup();
 		return 1;
 	}
-	
-	
+
+	*rslt = result;
 	return ConnectSocket;
+
+
+
+}
+
+int Httpconnect(const char *HOST, const int port, const SOCKET soc, struct addrinfo *rslt)
+{
+
+	int res;
+
+	res = connect(soc, rslt->ai_addr, (int)rslt->ai_addrlen);
+	if (res == SOCKET_ERROR)
+	{
+		printf("In func::Httpconnect::failed to connect to server:::");
+		freeaddrinfo(rslt);
+		WSACleanup();
+		closesocket(soc);
+		return 1;
+	}
+
+	freeaddrinfo(rslt);
+
 	return 0;
 
+}
+
+const char* Httpsend(const SOCKET soc, const char *RequestType)
+{
+
+    int sendres = send(soc, RequestType, (int)strlen(RequestType), 0);
+
+    if (sendres != SOCKET_ERROR){ return "request sent"; }
+
+
+    else { return "send failed"; }
+
+
 
 }
 
-int Httpconnect(SOCKET soc, struct addrinfo *result)
+const char* Httprecv(const SOCKET soc)
 {
-	
-	
-    int res = connect(soc, result->ai_addr, (int)result->ai_addrlen);
-    if (res == SOCKET_ERROR)
+
+    static char recvbuff[4096];
+    int recvr = recv(soc, recvbuff, sizeof(recvbuff)-1, 0);
+
+    if(recvr > 0)
     {
-        printf("connect failed\n");
-        closesocket(soc);
-        return 1;
+        recvbuff[recvr] = '\0';
+        return recvbuff;
+    }
+    else if(recvr == 0)
+    {
+        return "connection closed by server";
     }
 
-
-
-    return 0;
-	
-	
-}
-
-int Httpsend(SOCKET soc, const char *request)
-{
-    int res = send(soc, request, strlen(request), 0);
-
-    if (res != SOCKET_ERROR)
-	{
-		return res;
-	}
-
-
-    return 1;
-	
-}
-
-int Httprecv(const SOCKET soc)
-{
-
-	char buff[4096];
-	int recvres;
-
-	recvres = recv(soc, buff, 4096, 0);
-
-	if (recvres > 0)
-	{
-		return buff;
-	}
-	else
-	{
-		return "\nrecv failed";
-	}
-
-
+    else
+    {
+        int err = WSAGetLastError();
+        static char errbuf[64];
+        snprintf(errbuf, sizeof(errbuf), "recv failed: %d", err);
+        return errbuf;
+    }
 
 }
-
 
 
  #endif
