@@ -5,40 +5,44 @@
 
 #include <stdio.h>
 #include <winsock.h>
+#include <ws2tcpip.h>
+#include <string.h>
 
 typedef enum {
 
     GET,
     POST,
     PUT,
-    DELETE,
+    rDELETE,
 	UNKNOWN,
 
 } REQUEST;
 
-
-
-REQUEST Httpbuild(const char *type, const char* HOST)
+REQUEST Httpbuild(const char *type)
 {
-
-	const char request[1024];
 	
-	if (strcmp(type, "GET") == 0) {return GET;}
-	if (strcmp(type, "POST") == 0) {return POST;}
-	if (strcmp(type, "PUT") == 0) {return PUT;}
-	if (strcmp(type, "DELETE") == 0) {return DELETE;}
-
-	else {return UNKNOWN;}
-
-	request = {
-				"%s, / HTTP/1.1\r\n",
-				"Host: %s\r\n",
-				"Connection: close\r\n\r\n",
-				type, HOST
-	}
+	
+    if (strcmp(type, "GET") == 0) return GET;
+    if (strcmp(type, "POST") == 0) return POST;
+    if (strcmp(type, "PUT") == 0) return PUT;
+    if (strcmp(type, "DELETE") == 0) return rDELETE;
 
 
+    return UNKNOWN;
+	
+	
+}
 
+void HttpBuildRequest(char *request, const char *type, const char *HOST)
+{
+	
+    sprintf(request,
+        "%s / HTTP/1.1\r\n"
+        "Host: %s\r\n"
+        "Connection: close\r\n\r\n",
+        type, HOST);
+		
+		
 }
 
 int HttpOpenBridge(const char *HOST, const char *port)
@@ -70,7 +74,7 @@ int HttpOpenBridge(const char *HOST, const char *port)
 		return 1;
 	}
 
-	ConnectSocket = socket(AF_INET, SOCK_STREAM, 0);
+	ConnectSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	if (ConnectSocket == INVALID_SOCKET)
 	{
 		printf("In func::HttpOpenBridge::failed to create socket::: %ld\n", WSAGetLastError());
@@ -78,49 +82,48 @@ int HttpOpenBridge(const char *HOST, const char *port)
 		WSACleanup();
 		return 1;
 	}
-
+	
+	
+	return ConnectSocket;
 	return 0;
 
 
-
 }
 
-int Httpconnect(const char *HOST, const int port, const SOCKET soc, struct addrinfo *result)
+int Httpconnect(SOCKET soc, struct addrinfo *result)
 {
+	
+	
+    int res = connect(soc, result->ai_addr, (int)result->ai_addrlen);
+    if (res == SOCKET_ERROR)
+    {
+        printf("connect failed\n");
+        closesocket(soc);
+        return 1;
+    }
 
-	int res;
 
-	res = connect(soc, result->ai_addr, (int)result->ai_addrlen);
-	if (res == SOCKET_ERROR)
-	{
-		printf("In func::Httpconnect::failed to connect to server:::");
-		closesocket(soc);
-		soc = INVALID_SOCKET;
-	}
 
-	freeaddrinfo(result);
-
-	return 0;
-
+    return 0;
+	
+	
 }
 
-char *Httpsend(const SOCKET soc, const char RequestType[1024])
+int Httpsend(SOCKET soc, const char *request)
 {
+    int res = send(soc, request, strlen(request), 0);
 
-	char buff[4096];
-	int sendres;
-
-	sendres = send(soc, RequestType, (int)strlen(RequestType), 0);
-
-	if (sendres != SOCKET_ERROR)
+    if (res != SOCKET_ERROR)
 	{
-		return "\nrequest sent";
+		return res;
 	}
 
 
+    return 1;
+	
 }
 
-char *Httprecv(const SOCKET soc)
+int Httprecv(const SOCKET soc)
 {
 
 	char buff[4096];
