@@ -1,12 +1,21 @@
 #ifdef _WIN32
 
-	#define defaultport "80"
+	#define defaultport "443"
 
 	#include <stdio.h>
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
 	#include <string.h>
-
+	#include <openssl/ssl.h>
+	#include <openssl/err.h>
+	
+	void SSLInit
+	{
+		SSL_library_init();
+		SSL_load_error_strings();
+		OpenSSL_add_all_algorithms();
+	}
+	
 	typedef enum {
 
 		GET,
@@ -203,47 +212,38 @@
 
 	}
 
-	const char* Httpsend(const SOCKET soc, const char *RequestType)
+	const char* HttpsendSSL(SSL* sslsocket, const char* RequestType)
 	{
-
-		int sendres = send(soc, RequestType, (int)strlen(RequestType), 0);
-
-		if (sendres != SOCKET_ERROR){ return "request sent"; }
-
-
-		else { return "send failed"; }
-
-
+		int sendres = SSL_write(sslsocket, RequestType, (int)strlen(RequestType));
+		if (sendres <= 0)
+		{
+			ERR_print_errors_fp(stderr);
+			return "send failed";
+		}
+		return "request sent";
 	}
 
-	char* HttprecvFull(SOCKET soc)
+	char* HttprecvFullSSL(SSL* sslsocket)
 	{
 		
-		
-		char *buffer = (char*)malloc(4096);
+		char* buffer = (char*)malloc(4096);
 		if (!buffer) return NULL;
-		
+
 		int recvr;
-		while((recvr = recv(soc, buffer, sizeof(buffer) - 1 , 0)) > 0)
+		while ((recvr = SSL_read(sslsocket, buffer, 4095)) > 0)
 		{
 			buffer[recvr] = '\0';
 			printf("%s", buffer);
 		}
 
-		if(recvr <= 0)
+		if (recvr <= 0)
 		{
 			printf("\n[Connection closed by server]\n");
 			free(buffer);
 		}
-		
-		else if(recvr == SOCKET_ERROR)
-		{
-			
-			printf("\n[Recv failed: %d]\n", WSAGetLastError());
-			
-		}
-		
+
 		return buffer;
+		
 		
 	}
 	
