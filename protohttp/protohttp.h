@@ -23,8 +23,6 @@
 		HTTP_SWITCHING_PROTOCOLS = 101,
 		HTTP_PROCESSING = 102,
 		HTTP_EARLY_HINTS = 103,
-
-
 		HTTP_OK = 200,
 		HTTP_CREATED = 201,
 		HTTP_ACCEPTED = 202,
@@ -35,8 +33,6 @@
 		HTTP_MULTI_STATUS = 207,
 		HTTP_ALREADY_REPORTED = 208,
 		HTTP_IM_USED = 226,
-
-
 		HTTP_MULTIPLE_CHOICES = 300,
 		HTTP_MOVED_PERMANENTLY = 301,
 		HTTP_FOUND = 302,
@@ -45,8 +41,6 @@
 		HTTP_USE_PROXY = 305,
 		HTTP_TEMPORARY_REDIRECT = 307,
 		HTTP_PERMANENT_REDIRECT = 308,
-
-
 		HTTP_BAD_REQUEST = 400,
 		HTTP_UNAUTHORIZED = 401,
 		HTTP_PAYMENT_REQUIRED = 402,
@@ -76,8 +70,6 @@
 		HTTP_TOO_MANY_REQUESTS = 429,
 		HTTP_REQUEST_HEADER_FIELDS_TOO_LARGE = 431,
 		HTTP_UNAVAILABLE_FOR_LEGAL_REASONS = 451,
-
-		
 		HTTP_INTERNAL_SERVER_ERROR = 500,
 		HTTP_NOT_IMPLEMENTED = 501,
 		HTTP_BAD_GATEWAY = 502,
@@ -228,19 +220,20 @@
 	{
 		
 		
-		char buffer[4096];
+		char *buffer = (char*)malloc(4096);
+		if (!buffer) return NULL;
+		
 		int recvr;
-
-
-		while((recvr = recv(soc, buffer, sizeof(buffer)-1, 0)) > 0)
+		while((recvr = recv(soc, buffer, sizeof(buffer) - 1 , 0)) > 0)
 		{
 			buffer[recvr] = '\0';
 			printf("%s", buffer);
 		}
 
-		if(recvr == 0)
+		if(recvr <= 0)
 		{
 			printf("\n[Connection closed by server]\n");
+			free(buffer);
 		}
 		
 		else if(recvr == SOCKET_ERROR)
@@ -251,7 +244,6 @@
 		}
 		
 		return buffer;
-		
 		
 	}
 	
@@ -343,7 +335,7 @@
 		HTTPRESPONSE result;
 		
 		int code = StatusCode(recvbuff);
-		char status =  HttpTextcode(code);
+		char *status =  HttpTextcode(code);
 		
 		if (code == 1)
 		{
@@ -355,7 +347,9 @@
 		}
 		
 		result.status = code;
-		result.status_test = status;
+		result.status_text = status;
+		
+		return result;
 		
 	}
 

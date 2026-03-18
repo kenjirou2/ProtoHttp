@@ -19,8 +19,9 @@ int main()
 	Httpsend(ConnectSocket, request);
 	
 	char* recved = HttprecvFull(ConnectSocket);
-	StatusCode(recved);
-	httparse(recved);
+	HTTPRESPONSE result = httparse(recved);
+	printf("\n\n\nStatus: %d, Text: %s\n", result.status, result.status_text);
+	
 	
 	return 0;
 	
