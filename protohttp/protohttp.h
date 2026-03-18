@@ -343,6 +343,7 @@
 		HTTPRESPONSE result;
 		
 		int code = StatusCode(recvbuff);
+		char status =  HttpTextcode(code);
 		
 		if (code == 1)
 		{
@@ -354,7 +355,7 @@
 		}
 		
 		result.status = code;
-		result.status_test = ""
+		result.status_test = status;
 		
 	}
 
