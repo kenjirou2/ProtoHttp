@@ -1,59 +1,45 @@
-#include <stdio.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include "protohttp.h"
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include "protohttp.h"  // your header file with all the functions
 
-int main()
-{
-    SSLInit();          // Initialize OpenSSL
-    WSAIntilize();      // Initialize Winsock
+int main() {
 
-    const char* type = "GET";
+    // Initialize WinSock
+    if (WSAIntilize() != 0) return 1;
 
-    char request[512];
-    HttpbuildRequest(type, "example.com", request, sizeof(request));
+    // Initialize OpenSSL
+    OpenSSLIntilize();
 
-    struct addrinfo* rslt;
-    SOCKET ConnectSocket = HttpOpenBridge("example.com", "443", &rslt);
-    Httpconnect("example.com", 443, ConnectSocket, rslt);
+    // Create TLS context
+    SSL_CTX* ctx = TLSContext();
+    if (!ctx) return 1;
 
-    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    if (!ctx) { ERR_print_errors_fp(stderr); return 1; }
+    struct addrinfo* result = NULL;
 
-    SSL* ssl = SSL_new(ctx);
-    SSL_set_fd(ssl, ConnectSocket);
+    // Open a socket connection
+    SOCKET sock = HttpOpenBridge("www.example.com", tlsdefaultport, &result);
+    if (sock == 1) return 1; // failed
 
-    if (SSL_connect(ssl) <= 0) {
-        ERR_print_errors_fp(stderr);
-        SSL_free(ssl);
-        SSL_CTX_free(ctx);
-        closesocket(ConnectSocket);
-        return 1;
-    }
+    // Connect to server
+    if (Httpconnect("www.example.com", 443, sock, result) != 0) return 1;
 
+    // Wrap socket in SSL, now passing the host!
+    SSL* ssl = WrapSocketTLS(ctx, sock, "www.example.com");
+    if (!ssl) return 1;
 
-    HttpsendSSL(ssl, request);
+    // Build HTTP GET request
+    char request[1024];
+    HttpbuildRequest("GET", "www.example.com", request, sizeof(request));
 
+    // Send request
+    printf("%s\n", HttpsendSSL(ssl, request));
 
-    char* recved = HttprecvFullSSL(ssl);
+    // Receive full response
+    char* response = HttprecvFullSSL(ssl);
+    if (response) free(response);
 
-
-    HTTPRESPONSE result = httparse(recved);
-    printf("\n\nStatus: %d, Text: %s\n", result.status, result.status_text);
-
-
-    SSL_shutdown(ssl);
-    SSL_free(ssl);
-    SSL_CTX_free(ctx);
-    closesocket(ConnectSocket);
+    // Cleanup
+    CloseTLS(ssl, ctx, sock);
     WSACleanup();
 
-    if (recved)
-	{
-		free(recved);
-	}
-
     return 0;
+
 }

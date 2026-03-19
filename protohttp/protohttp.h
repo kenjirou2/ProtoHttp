@@ -1,6 +1,7 @@
 #ifdef _WIN32
 
-	#define defaultport "443"
+	#define defaultport "80"
+	#define tlsdefaultport "443"
 
 	#include <stdio.h>
 	#include <winsock2.h>
@@ -8,14 +9,10 @@
 	#include <string.h>
 	#include <openssl/ssl.h>
 	#include <openssl/err.h>
-	
-	void SSLInit
-	{
-		SSL_library_init();
-		SSL_load_error_strings();
-		OpenSSL_add_all_algorithms();
-	}
-	
+	#include <openssl/applink.c>
+
+
+
 	typedef enum {
 
 		GET,
@@ -92,78 +89,98 @@
 		HTTP_NETWORK_AUTHENTICATION_REQUIRED = 511
 
 	} HTTPCODE;
-	
-	
-	
+
+
+
 	typedef struct {
-		
+
 		HTTPCODE status;
-		const char *status_text;
+		const char* status_text;
 
 	} HTTPRESPONSE;
-	
-	
-	
-	
+
+
+	static void OpenSSLIntilize()
+	{
+
+		SSL_library_init();
+		SSL_load_error_strings();
+		OpenSSL_add_all_algorithms();
+
+	}
+
+	static SSL_CTX* TLSContext() {
+
+		const SSL_METHOD* method = TLS_client_method();
+		SSL_CTX* ctx = SSL_CTX_new(method);
+
+		if (!ctx) {
+			ERR_print_errors_fp(stderr);
+			return NULL;
+		}
+
+		return ctx;
+
+	}
+
 	int WSAIntilize()
 	{
 		WSADATA wsa;
-		if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
-			printf("WSAStartup failed\n");
+		if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+			fprintf(stderr, "\nWSAStartup failed\n");
 			return 1;
 		}
-		
+
 		return 0;
-	
+
 	}
 
-	REQUEST Httpbuild(const char *type)
+	REQUEST Httpbuild(const char* type)
 	{
 
 
-		if (strcmp(type, "GET") == 0){return GET;}
+		if (strcmp(type, "GET") == 0) { return GET; }
 
-		if (strcmp(type, "POST") == 0) {return POST;}
+		if (strcmp(type, "POST") == 0) { return POST; }
 
-		if (strcmp(type, "PUT") == 0){return PUT;}
+		if (strcmp(type, "PUT") == 0) { return PUT; }
 
-		if (strcmp(type, "DELETE_") == 0){return DELETE_;}
+		if (strcmp(type, "DELETE_") == 0) { return DELETE_; }
 
-		else {return UNKNOWN;}
-		
+		else { return UNKNOWN; }
+
 
 	}
 
-	void HttpbuildRequest(const char *rtype, const char *HOST, char *request, size_t sizeb)
+	void HttpbuildRequest(const char* rtype, const char* HOST, char* request, size_t sizeb)
 	{
 		snprintf(request, sizeb,
 			"%s / HTTP/1.1\r\n"
 			"Host: %s\r\n"
 			"Connection: close\r\n"
 			"\r\n",
-        rtype, HOST);
+			rtype, HOST);
 	}
 
 
 
-	SOCKET HttpOpenBridge(const char *HOST, const char *port, struct addrinfo **rslt)
+	SOCKET HttpOpenBridge(const char* HOST, const char* port, struct addrinfo** rslt)
 	{
 
-		struct addrinfo *result = NULL;
-		struct addrinfo *ptr = NULL;
+		struct addrinfo* result = NULL;
 		struct addrinfo socinfo;
 
 		SOCKET ConnectSocket = INVALID_SOCKET;
 		int res;
 
-		ZeroMemory( &socinfo, sizeof(socinfo) );
-		socinfo.ai_family   = AF_UNSPEC;
+		ZeroMemory(&socinfo, sizeof(socinfo));
+		socinfo.ai_family = AF_UNSPEC;
 		socinfo.ai_socktype = SOCK_STREAM;
 		socinfo.ai_protocol = IPPROTO_TCP;
 
-		if (strcmp(port, defaultport) != 0)
+		if (strcmp(port, defaultport) != 0 && strcmp(port, tlsdefaultport) != 0)
 		{
-			printf("In func::HttpOpenBridge::port asigned should be 80");
+			printf("In func::HttpOpenBridge::port asigned should be 80 or 443");
 			return 1;
 		}
 
@@ -191,12 +208,38 @@
 
 	}
 
-	int Httpconnect(const char *HOST, const int port, const SOCKET soc, struct addrinfo *rslt)
+	static SSL* WrapSocketTLS(SSL_CTX* ctx, SOCKET sock, const char* HOST)
+	{
+		SSL* ssl = SSL_new(ctx);
+		if (!ssl) { return NULL; }
+
+		SSL_set_fd(ssl, (int)sock);
+		SSL_set_tlsext_host_name(ssl, HOST);
+
+		if (SSL_connect(ssl) <= 0) {
+			ERR_print_errors_fp(stderr);
+			SSL_free(ssl);
+			return NULL;
+		}
+
+		return ssl;
+	}
+
+	void CloseTLS(SSL* ssl, SSL_CTX* ctx, SOCKET sock)
 	{
 
-		int res;
+		if (ssl) SSL_shutdown(ssl);
+		if (ssl) SSL_free(ssl);
+		if (ctx) SSL_CTX_free(ctx);
 
-		res = connect(soc, rslt->ai_addr, (int)rslt->ai_addrlen);
+		closesocket(sock);
+
+	}
+
+	int Httpconnect(const char* HOST, const int port, const SOCKET soc, struct addrinfo* rslt)
+	{
+
+		int res = connect(soc, rslt->ai_addr, (int)rslt->ai_addrlen);
 		if (res == SOCKET_ERROR)
 		{
 			printf("In func::Httpconnect::failed to connect to server:::");
@@ -212,42 +255,39 @@
 
 	}
 
-	const char* HttpsendSSL(SSL* sslsocket, const char* RequestType)
+	static const char* HttpsendSSL(SSL* ssl, const char* buffer)
 	{
-		int sendres = SSL_write(sslsocket, RequestType, (int)strlen(RequestType));
-		if (sendres <= 0)
-		{
-			ERR_print_errors_fp(stderr);
-			return "send failed";
-		}
-		return "request sent";
-	}
 
-	char* HttprecvFullSSL(SSL* sslsocket)
+		int sent = SSL_write(ssl, buffer, (int)strlen(buffer));
+		if (sent <= 0) { return "send failed"; }
+
+		return "request sent";
+
+	}	
+
+	char* HttprecvFullSSL(SSL* ssl)
 	{
-		
 		char* buffer = (char*)malloc(4096);
 		if (!buffer) return NULL;
 
-		int recvr;
-		while ((recvr = SSL_read(sslsocket, buffer, 4095)) > 0)
+		int bytes;
+	
+		while ((bytes = SSL_read(ssl, buffer, 4095)) > 0)
 		{
-			buffer[recvr] = '\0';
+			buffer[bytes] = '\0';
 			printf("%s", buffer);
 		}
 
-		if (recvr <= 0)
-		{
-			printf("\n[Connection closed by server]\n");
+		if (bytes < 0) {
 			free(buffer);
+			return NULL;
 		}
 
 		return buffer;
-		
-		
+
 	}
-	
-	int StatusCode(const char *recvbuff)
+
+	int StatusCode(const char* recvbuff)
 	{
 
 		int status = 0;
@@ -255,13 +295,14 @@
 		if (sscanf(recvbuff, "HTTP/%*s %d", &status) == 1) {
 			return status;
 		}
-		
+
 		return 1;
-		
+
 	}
-	
+
 	char* HttpTextcode(int status)
 	{
+
 		switch (status)
 		{
 			case 100: return "Continue";
@@ -327,30 +368,35 @@
 			case 511: return "Network Authentication Required";
 			default:  return "Unknown Status";
 		}
+
+
+
 	}
-	
-	HTTPRESPONSE httparse(const char *recvbuff)
+
+	HTTPRESPONSE httparse(const char* recvbuff)
 	{
-		
+
 		HTTPRESPONSE result;
-		
+
 		int code = StatusCode(recvbuff);
-		char *status =  HttpTextcode(code);
-		
+		char* status = HttpTextcode(code);
+
 		if (code == 1)
 		{
 			result.status = 0;
 			result.status_text = "Invalid Status";
-			
+
 			return result;
-			
+
 		}
-		
+
 		result.status = code;
 		result.status_text = status;
-		
+
 		return result;
-		
+
 	}
 
- #endif
+
+
+#endif
