@@ -210,6 +210,7 @@
 
 	static SSL* WrapSocketTLS(SSL_CTX* ctx, SOCKET sock, const char* HOST)
 	{
+
 		SSL* ssl = SSL_new(ctx);
 		if (!ssl) { return NULL; }
 
@@ -223,6 +224,7 @@
 		}
 
 		return ssl;
+
 	}
 
 	void CloseTLS(SSL* ssl, SSL_CTX* ctx, SOCKET sock)
@@ -292,7 +294,7 @@
 
 		int status = 0;
 
-		if (sscanf(recvbuff, "HTTP/%*s %d", &status) == 1) {
+		if (sscanf(recvbuff, "HTTP/%*[^ ] %d", &status) == 1) {
 			return status;
 		}
 
@@ -300,7 +302,7 @@
 
 	}
 
-	char* HttpTextcode(int status)
+	const char* HttpTextcode(int status)
 	{
 
 		switch (status)

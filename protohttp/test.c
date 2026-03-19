@@ -34,7 +34,8 @@ int main() {
 
     // Receive full response
     char* response = HttprecvFullSSL(ssl);
-    if (response) free(response);
+
+    HTTPRESPONSE res = httparse(response);
 
     // Cleanup
     CloseTLS(ssl, ctx, sock);
