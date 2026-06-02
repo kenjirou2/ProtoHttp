@@ -116,7 +116,7 @@ SSL_CTX SSLCTX() {
 	}
 
 	return ctx;
-
+	
 }
 
 int WSAIntilize()
@@ -132,7 +132,6 @@ int WSAIntilize()
 REQUEST Httpbuild(const char* type)
 {
 
-
 	if (strcmp(type, "GET") == 0) { return GET; }
 
 	if (strcmp(type, "POST") == 0) { return POST; }
@@ -142,7 +141,6 @@ REQUEST Httpbuild(const char* type)
 	if (strcmp(type, "DELETE_") == 0) { return DELETE_; }
 
 	else { return UNKNOWN; }
-
 
 }
 
@@ -203,7 +201,11 @@ SSL* WrapSocketTLS(SSL_CTX* ctx, SOCKET sock, const char* HOST)
 {
 
 	SSL* ssl = SSL_new(ctx);
-	if (!ssl) { return NULL; }
+	if (ssl == NULL)
+	{
+		fprintf(stderr, "\n failed to create SSl object");
+		return NULL;
+	}
 
 	SSL_set_fd(ssl, (int)sock);
 	SSL_set_tlsext_host_name(ssl, HOST);
@@ -226,7 +228,8 @@ void CloseTLS(SSL* ssl, SSL_CTX* ctx, SOCKET sock)
 	if (ctx) SSL_CTX_free(ctx);
 
 	closesocket(sock);
-
+	return;
+	
 }
 
 int Httpconnect(const SOCKET soc, struct addrinfo* rslt)
@@ -248,14 +251,17 @@ int Httpconnect(const SOCKET soc, struct addrinfo* rslt)
 
 }
 
-const char* HttpsendSSL(SSL* ssl, const char* buffer)
+int HttpsendSSL(SSL* ssl, const char* buffer, size_t written)
 {
-
-	int sent = SSL_write(ssl, buffer, (int)strlen(buffer));
-	if (sent <= 0) { return "send failed"; }
-
-	return "request sent";
-
+	
+	if(SSL_write_ex(ssl, buffer, sizeof(host), written) != 1)
+	{
+		fprintf(stderr, "\nfailed to send data stream to server");
+		return 1;
+	}
+	
+	return 0;
+	
 }	
 
 char* HttprecvFullSSL(SSL* ssl)
