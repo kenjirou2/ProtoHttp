@@ -254,9 +254,14 @@ int Httpconnect(const SOCKET soc, struct addrinfo* rslt)
 int HttpsendSSL(SSL* ssl, const char* buffer, size_t written)
 {
 	
-	if(SSL_write_ex(ssl, buffer, sizeof(host), written) != 1)
+	if(SSL_write_ex(ssl, buffer, sizeof(buffer), written) != 1)
 	{
 		fprintf(stderr, "\nfailed to send data stream to server");
+		return 1;
+	}
+	else if(written != sizeof(buffer))
+	{
+		fprintf(stderr, "\nfailed to sent full data stream");
 		return 1;
 	}
 	
