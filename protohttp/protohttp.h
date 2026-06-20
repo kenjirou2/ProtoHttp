@@ -1,16 +1,35 @@
 #ifndef PROTOHTTP_H
 #define PROTOHTTP_H
 
-#ifdef _WIN32
-
 #define DEFAULT_PORT "80"
 #define TLS_DEFAULT_PORT "443"
-#endif
 
-#include <stdio.h>
+
+
+#if defined(_WIN32)
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+
+int WSAInitilize(void);
+
+#else
+
+typedef int             SOCKET;     // To allow usage of the same function with type SOCKET ...(), without needing to rewrite function type
+#define INVALID_SOCKET  -1
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <errno.h>
+
+#endif
+
+
+
+#include <stdio.h>
 #include <string.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -22,7 +41,7 @@ typedef enum
 	GET,
 	POST,
 	PUT,
-	DELETE_,
+	DDELETE,
 	UNKNOWN,
 
 } REQUEST;
@@ -105,9 +124,10 @@ typedef struct
 } HTTPRESPONSE;
 
 
+int GetError(void);
+int CloseSocket(SOCKET Socket);
 void OpenSSLIntilize(void);
 SSL_CTX* SSLCTX(void);
-int WSAIntilize(void);
 REQUEST Httpbuild(const char* type);
 void HttpbuildRequest(const char* Type, const char* HOST, char* request, size_t sizeb);
 SOCKET HttpOpenBridge(const char* HOST, const char* port, struct addrinfo** rslt);
@@ -118,7 +138,7 @@ int HttpsendSSL(SSL *ssl, const char* buffer, size_t* written);
 char* HttprecvFullSSL(SSL* ssl);
 const char* HttpTextcode(int status);
 HTTPRESPONSE httparse(const char* recvbuff);
-
+int StatusCode(const char* recvbuff);
 
 
 #endif
