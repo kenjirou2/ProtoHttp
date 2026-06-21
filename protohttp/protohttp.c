@@ -31,6 +31,8 @@ int CloseSocket(SOCKET Socket)
 
 #endif
 
+    return 0;
+
 }
 
 void OpenSSLIntilize(void)
@@ -58,6 +60,7 @@ SSL_CTX* SSLCTX(void)
 
 int WSAInitilize(void)
 {
+#if defined(_WIN32)
 
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2) &wsa) != 0)
@@ -67,6 +70,11 @@ int WSAInitilize(void)
 	}
 
 	return 0;
+    
+#else
+    return 0;
+
+#endif
 
 }
 
@@ -82,7 +90,7 @@ REQUEST Httpbuild(const char* type)
 
 }
 
-void HttpBuildRequest(REQUEST request_t, char* buffer, const char* method, const char* host, const char* data)
+void HttpBuildRequest(REQUEST request_t, char* buffer, const char* host, const char* data)
 {
 
     if (data == NULL) {;;;}
@@ -90,32 +98,25 @@ void HttpBuildRequest(REQUEST request_t, char* buffer, const char* method, const
     if (request_t == GET)
     {
         sprintf(buffer,
-                "%s / HTTP/1.1\r\n"
+                "GET / HTTP/1.1\r\n"
                 "Host: %s\r\n"
                 "Connection: close\r\n"
                 "\r\n",
-                method,
                 host);
     }
 
     else if (request_t == POST)
     {
         sprintf(buffer,
-                "%s / HTTP/1.1\r\n"
+                "POST / HTTP/1.1\r\n"
                 "Host: %s\r\n"
-                "Content-Length: %d\r\n"
+                "Content-Length: %zu\r\n"
                 "Connection: close"
                 "\r\n"
                 "%s",
-                method,
                 host,
                 strlen(data),
                 data);
-    }
-
-    else if (request_t == PUT)
-    {
-
     }
 
 }
@@ -129,15 +130,7 @@ SOCKET HttpOpenBridge(const char* HOST, const char* port, struct addrinfo** rslt
 
 	SOCKET ConnectSocket = INVALID_SOCKET;
 
-
-
-#if defined(_WIN32)
-        SecureZeroMemory(&socinfo, sizeof(socinfo));
-#else
-        socinfo = {0};
-#endif
-
-
+    memset(&socinfo, 0, sizeof(socinfo));
 
 	socinfo.ai_family   =     AF_UNSPEC;
 	socinfo.ai_socktype =   SOCK_STREAM;
@@ -177,7 +170,7 @@ SSL* WrapSocketTLS(SSL_CTX* ctx, SOCKET sock, const char* HOST)
 	SSL* ssl = SSL_new(ctx);
 	if (ssl == NULL)
 	{
-		fprintf(stderr, "\n failed to create SSl object", GetError());
+		fprintf(stderr, "\n failed to create SSl object %d", GetError());
 		return NULL;
 	}
 
@@ -212,7 +205,7 @@ int HttpConnect(const SOCKET sock, struct addrinfo* rslt)
 	int res = connect(sock, rslt->ai_addr, (int)rslt->ai_addrlen);
 	if (res == SOCKET_ERROR)
 	{
-		fprintf(stderr, "\nfailed to connect to server", GetError());
+		fprintf(stderr, "\nfailed to connect to server %d", GetError());
 		freeaddrinfo(rslt);
         CloseSocket(sock);
         return 1;
