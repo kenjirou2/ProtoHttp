@@ -42,7 +42,6 @@ typedef enum
 
 	GET,
 	POST,
-	PUT,
 	DDELETE,
 	UNKNOWN,
 
@@ -127,14 +126,21 @@ typedef struct
 
 int WSAInitilize(void);
 int GetError(void);
-int CloseSocket(SOCKET Socket);
+
+// int CloseSocket(SOCKET Socket); Commented only for this project and not in actuall project as CloseSocket already exists in Xenon/xenon.h
+
+int CCloseSocket(SOCKET Socket);
+
 void OpenSSLIntilize(void);
 SSL_CTX* SSLCTX(void);
+
 REQUEST Httpbuild(const char* type);
-void HttpbuildRequest(const char* Type, const char* HOST, char* request, size_t sizeb);
+void HttpBuildRequest(REQUEST request_t, char* buffer, const char* host, const char* data);
 SOCKET HttpOpenBridge(const char* HOST, const char* port, struct addrinfo** rslt);
 SSL* WrapSocketTLS(SSL_CTX* ctx, SOCKET sock, const char* HOST);
+
 void CloseTLS(SSL* ssl, SSL_CTX* ctx, SOCKET sock);
+
 int HttpConnect(const SOCKET soc, struct addrinfo* rslt);
 int HttpsendSSL(SSL *ssl, const char* buffer, size_t* written);
 char* HttprecvFullSSL(SSL* ssl);
