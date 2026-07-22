@@ -1,8 +1,8 @@
 #ifndef PROTOHTTP_H
 #define PROTOHTTP_H
 
-#define DEFAULT_PORT "80"
-#define TLS_DEFAULT_PORT "443"
+#define PROTOHTTP_DEFAULT_HTTP_PORT "80"
+#define PROTOHTTP_DEFAULT_HTTPS_PORT "443"
 
 #define PROTOHTTP_LIB_VERSION 0.1
 
@@ -10,14 +10,56 @@
 #define WOLFCRYPT   1
 #define CRYPTLIB    2
 
+#define EMPTY 0
+#define MAX 100
+
 #define SOCKET_TIMEOUT_DEFAULT 5
 #define SOCKET_TIMEOUT_SET (x) (x > 0 && x > 5)
+
+#ifndef PROTOHTTPLIB_PROTOCOL_TCP
+#define PROTOHTTPLIB_PROTOCOL_TCP 0
+
+#ifndef PROTOHTTPLIB_BUFFERSIZE
+#define PROTOHTTPLIB_BUFFERSIZE (EMPTY)
+
+#ifndef LISTENING_TIMOUT_MAX
+#define LISTENING_TIMOUT_MAX (MAX)
+
+#ifndef LISTENING_TIMOUT
+#define LISTENING_TIMOUT (x) (x > EMPTY)
+
+#ifndef PROTOHTTP_PAYLOAD_MAXSIZE
+#define PROTOHTTP_PAYLOAD_MAXSIZE 100000
+
+#ifndef PROTOHTTP_PAYLOAD_SIZE
+#define PROTOHTTP_PAYLOAD_SIZE (x) (x > EMPTY)
+
+typedef enum
+{
+    
+    SOCKET_CREATION_FAILED                  = (int)0x00,
+    OPENSSL_INITIALIZE                      = (int)0x01,
+    OPENSSL_CONTEXT_CREATION_FAILED         = (int)0x02,
+    WINSOCK_LIBRARY_INITILIZATION_FAILED    = (int)0x03,
+    WINSOCK_LIBRARY_NOT_INITILIZED          = (int)0x04,
+    INVALID_HTTP_METHOD                     = (int)0x05,
+    INVALID_PORT                            = (int)0x06,
+    HTTP_BUILD_FAILED                       = (int)0x07,
+    OPENSSL_WEBSOCKET_WRAP_FAILURE          = (int)0x08,
+    OPENSSL_WEBSOCKET_CLOSING_FAILURE       = (int)0x09,
+    OPENSSL_WEBSOCKET_RECVING_FAILED        = (int)0x0A,
+    OPENSSL_WEBSOCKET_WRITING_FAILED        = (int)0x0B,
+    WEBSOCKET_WRITING_FAILED                = (int)0x0C,
+    WEBSOCKET_RECVING_FAILED                = (int)0x0D,
+    FAILED_TOGET_STATUSCODE                 = (int)0x0E,
+    PARSING_HTTP_BUFFER_FAILED              = (int)0x0F
+    
+} errno;
 
 #if defined(_WIN32)
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <windows.h>
 
 #elif defined (__LINUX__) || defined(__APPLE__)
 
@@ -128,12 +170,10 @@ typedef struct
 
 } HTTPRESPONSE;
 
-int WSAInitilize(void);
+int WINDOWSInitialize(void);
 int GetError(void);
 
-// int CloseSocket(SOCKET Socket); Commented only for this project and not in actuall project as CloseSocket already exists in Xenon/xenon.h
-
-int CCloseSocket(SOCKET Socket);
+void CloseWebSocket(SOCKET Socket);
 
 void OpenSSLIntilize(void);
 SSL_CTX* SSLCTX(void);

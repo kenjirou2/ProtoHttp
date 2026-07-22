@@ -11,7 +11,7 @@ int GetError(void)
 
 }
 
-int CCloseSocket(SOCKET Socket)
+int CloseWebSocket(SOCKET Socket)
 {
 
 #if defined(_WIN32)
@@ -58,7 +58,7 @@ SSL_CTX* SSLCTX(void)
 
 }
 
-int WSAInitilize(void)
+int WINDOWSInitialize(void)
 {
 
 #if defined(_WIN32)
@@ -119,6 +119,8 @@ void HttpBuildRequest(REQUEST request_t, char* buffer, const char* host, const c
                 strlen(data),
                 data);
     }
+    
+    return HTTP_BUILD_FAILED;
 
 }
 
@@ -147,7 +149,7 @@ SOCKET HttpOpenBridge(const char* HOST, const char* port, struct addrinfo** pres
 	if (res != 0)
 	{
 		printf("In func::HttpOpenBridge::Getaddrinfo failed::: %d\n", res);
-        CCloseSocket(0);
+        CloseWebSocket(0);
         return 1;
 	}
 
@@ -268,17 +270,14 @@ char* HttprecvFullSSL(SSL* ssl)
 int StatusCode(const char* recvbuff)
 {
 
-	int status = 0;
+	HTTPCODE status = 0;
 
-	if (sscanf(recvbuff, "HTTP/%*s %d", &status) == 1) {
-		return status;
-	}
-
-	return 1;
+	if (sscanf(recvbuff, "HTTP/%*s %d", status) == 1) { return status; }
+	return FAILED_TOGET_STATUSCODE;
 
 }
 
-const char* HttpTextcode(int status)
+const char* HttpTextcode(HTTPCODE status)
 {
 
 	switch (status)
@@ -344,7 +343,7 @@ const char* HttpTextcode(int status)
 		case 508: return "Loop Detected";
 		case 510: return "Not Extended";
 		case 511: return "Network Authentication Required";
-		default:  return "Unknown Status";
+		default:  return "UNKNOWN STATUS";
 	}
 
 
