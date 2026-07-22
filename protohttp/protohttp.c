@@ -355,16 +355,17 @@ HTTPRESPONSE httparse(const char* recvbuff)
 
 	HTTPRESPONSE result;
 
-	int code = StatusCode(recvbuff);
+	HTTPCODE code = StatusCode(recvbuff);
 	const char* status = HttpTextcode(code);
 
-	if (code == 1)
+	if (code == FAILED_TOGET_STATUSCODE)
 	{
-		result.status = 0;
-		result.status_text = "Invalid Status";
-
+		result.status = INVALID_STATUS;
+		result.status_text = INVALID_TEXT_STATUS;
+        result.totaltime = PROTOHTTP_TOTAL_TIME(0);
+        result.totalrequests = NO_REQUESTS_DONE;
+        
 		return result;
-
 	}
 
 	result.status = code;

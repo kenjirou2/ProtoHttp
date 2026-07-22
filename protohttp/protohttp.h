@@ -34,6 +34,14 @@
 #ifndef PROTOHTTP_PAYLOAD_SIZE
 #define PROTOHTTP_PAYLOAD_SIZE (x) (x > EMPTY)
 
+#ifndef PROTOHTTP_TOTAL_TIME
+#define PROTOHTTP_TOTAL_TIME (x) (x > -1.000)
+
+#define NO_REQUESTS_DONE (EMPTY)
+#define INVALID_TEXT_STATUS "INVALID HTTP RESULT CODE"
+
+typedef time_t size_t;
+
 typedef enum
 {
     
@@ -52,7 +60,8 @@ typedef enum
     WEBSOCKET_WRITING_FAILED                = (int)0x0C,
     WEBSOCKET_RECVING_FAILED                = (int)0x0D,
     FAILED_TOGET_STATUSCODE                 = (int)0x0E,
-    PARSING_HTTP_BUFFER_FAILED              = (int)0x0F
+    PARSING_HTTP_BUFFER_FAILED              = (int)0x0F,
+    INVALID_STATUS                          = (int)0x10
     
 } errno;
 
@@ -167,7 +176,9 @@ typedef struct
 
 	HTTPCODE status;
 	const char* status_text;
-
+    time_t totaltime;
+    size_t totalrequests;
+    
 } HTTPRESPONSE;
 
 int WINDOWSInitialize(void);
