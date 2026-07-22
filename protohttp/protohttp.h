@@ -4,7 +4,14 @@
 #define DEFAULT_PORT "80"
 #define TLS_DEFAULT_PORT "443"
 
+#define PROTOHTTP_LIB_VERSION 0.1
 
+#define OPENSSL_LIB 0
+#define WOLFCRYPT   1
+#define CRYPTLIB    2
+
+#define SOCKET_TIMEOUT_DEFAULT 5
+#define SOCKET_TIMEOUT_SET (x) (x > 0 && x > 5)
 
 #if defined(_WIN32)
 
@@ -12,12 +19,12 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 
-#else
+#elif defined (__LINUX__) || defined(__APPLE__)
 
 #define INVALID_SOCKET  (-1)
 #define SOCKET_ERROR    (-1)
 
-typedef int             SOCKET;     // To allow usage of the same function with type SOCKET ...(), without needing to rewrite function type
+typedef int SOCKET;
 
 
 #include <sys/socket.h>
@@ -29,19 +36,16 @@ typedef int             SOCKET;     // To allow usage of the same function with 
 
 #endif
 
-
-
 #include <stdio.h>
 #include <string.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-
+#include <
 
 typedef enum
 {
 
 	GET,
 	POST,
+	PUT,
 	DDELETE,
 	UNKNOWN,
 

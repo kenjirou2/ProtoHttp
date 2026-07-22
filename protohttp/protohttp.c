@@ -162,7 +162,7 @@ SOCKET HttpOpenBridge(const char* HOST, const char* port, struct addrinfo** pres
 	
 	if (presult == NULL)
 	{
-		fprintf(stderr, "\n\aerror: passed in NULL to third argument of HttpOpenBridge")
+		fprintf(stderr, "\n\aerror: passed in NULL to third argument of HttpOpenBridge");
 		freeaddrinfo(result);
 		return -1;
 	}
@@ -214,7 +214,7 @@ int HttpConnect(const SOCKET sock, struct addrinfo* presult)
 	if (res == SOCKET_ERROR)
 	{
 		fprintf(stderr, "\nfailed to connect to server %d", GetError());
-		freeaddrinfo(rslt);
+		freeaddrinfo(presult);
         CCloseSocket(sock);
         return 1;
 	}
