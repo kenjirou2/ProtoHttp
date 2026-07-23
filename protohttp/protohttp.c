@@ -44,7 +44,7 @@ void OpenSSLIntilize(void)
 
 }
 
-SSL_CTX* SSLCTX(void)
+SSL_CTX* OPENSSLCTX(void)
 {
 
 	SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
@@ -66,15 +66,16 @@ int WINDOWSInitialize(void)
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
     {
-		fprintf(stderr, "\nWSAStartup failed\n");
-		return 1;
+        return WINSOCK_LIBRARY_INITILIZATION_FAILED;
 	}
 
-	return 0;
+	return WINSOCK_LIBRARY_INITILIZED;
     
-#else
-    return 0;
+#elif defined(__LINUX__) || defined (__APPLE__)
+    return CROSSPLATFORM_ACCEPTION;
 
+#else
+    #error "\nThis library is not available for current kernel."
 #endif
 
 }
@@ -87,7 +88,7 @@ REQUEST Httpbuild(const char* type)
 	if (strcmp(type, "PUT") == 0) { return PUT; }
 	if (strcmp(type, "DELETE_") == 0) { return DDELETE; }
 
-	return UNKNOWN;
+	return INVALID_HTTP_METHOD;
 
 }
 
@@ -270,7 +271,7 @@ char* HttprecvFullSSL(SSL* ssl)
 int StatusCode(const char* recvbuff)
 {
 
-	HTTPCODE status = 0;
+	HTTPCODE status = NONE;
 
 	if (sscanf(recvbuff, "HTTP/%*s %d", status) == 1) { return status; }
 	return FAILED_TOGET_STATUSCODE;

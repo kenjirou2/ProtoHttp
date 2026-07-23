@@ -4,7 +4,7 @@
 #define PROTOHTTP_DEFAULT_HTTP_PORT "80"
 #define PROTOHTTP_DEFAULT_HTTPS_PORT "443"
 
-#define PROTOHTTP_LIB_VERSION 0.1
+#define PROTOHTTP_LIB_VERSION 1.2.0
 
 #define OPENSSL_LIB 0
 #define WOLFCRYPT   1
@@ -19,6 +19,12 @@
 #ifndef PROTOHTTPLIB_PROTOCOL_TCP
 #define PROTOHTTPLIB_PROTOCOL_TCP 0
 
+#ifndef PROTOHTTPLIB_PROTOCOL_TLS
+#define PROTOHTTPLIB_PROTOCOL_TLS 1
+
+#ifndef PROTOHTTPLIB_BUFFERSIZE
+#define PROTOHTTPLIB_BUFFERSIZE (8000u)
+
 #ifndef PROTOHTTPLIB_BUFFERSIZE
 #define PROTOHTTPLIB_BUFFERSIZE (EMPTY)
 
@@ -27,12 +33,6 @@
 
 #ifndef LISTENING_TIMOUT
 #define LISTENING_TIMOUT (x) (x > EMPTY)
-
-#ifndef PROTOHTTP_PAYLOAD_MAXSIZE
-#define PROTOHTTP_PAYLOAD_MAXSIZE 100000
-
-#ifndef PROTOHTTP_PAYLOAD_SIZE
-#define PROTOHTTP_PAYLOAD_SIZE (x) (x > EMPTY)
 
 #ifndef PROTOHTTP_TOTAL_TIME
 #define PROTOHTTP_TOTAL_TIME (x) (x > -1.000)
@@ -61,7 +61,9 @@ typedef enum
     WEBSOCKET_RECVING_FAILED                = (int)0x0D,
     FAILED_TOGET_STATUSCODE                 = (int)0x0E,
     PARSING_HTTP_BUFFER_FAILED              = (int)0x0F,
-    INVALID_STATUS                          = (int)0x10
+    INVALID_STATUS                          = (int)0x10,
+    WINSOCK_LIBRARY_INITILIZED              = (int)0x11,
+    CROSSPLATFORM_ACCEPTION                 = (int)0x12
     
 } errno;
 
@@ -89,7 +91,6 @@ typedef int SOCKET;
 
 #include <stdio.h>
 #include <string.h>
-#include <
 
 typedef enum
 {
@@ -105,7 +106,8 @@ typedef enum
 
 typedef enum
 {
-
+    
+    NONE = 0,
 	HTTP_CONTINUE = 100,
 	HTTP_SWITCHING_PROTOCOLS = 101,
 	HTTP_PROCESSING = 102,
